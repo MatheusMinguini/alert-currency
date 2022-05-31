@@ -12,9 +12,7 @@ import (
 	"github.com/gen2brain/beeep"
 )
 
-const delay = 5
-
-type EURBRL struct {
+type Money struct {
 	Code        string
 	Codein      string
 	Name        string
@@ -29,32 +27,41 @@ type EURBRL struct {
 }
 
 type Response struct {
-	EURBRL EURBRL
+	EURBRL Money
+	USDBRL Money
 }
 
 func main() {
-	var valueToSell float64
 
-	fmt.Println("Type the value that you intend to sell the EUR for")
-	fmt.Scan(&valueToSell)
+	currency, valueToSell, delay := askUserTheInput()
 
 	for {
-		currentValue, highestValue := reachTheCurrencyAPI()
+		currentValue, highestValue := reachTheCurrencyAPI(currency)
 
-		fmt.Println("EUR now is R$", currentValue, " and the highest was R$", highestValue)
+		fmt.Println(currency, "now is R$", currentValue, " and the highest was R$", highestValue)
 
 		if currentValue >= valueToSell {
-			message := "Euro now is " + fmt.Sprintf("%f", currentValue)
-			//strconv.FormatFloat(currentValue, 'E', -1, 64)
+			message := currency + "now is " + fmt.Sprintf("%f", currentValue)
+
 			beeep.Notify("SELL IT NOW!!!", message, "assets/information.png")
+		} else if highestValue-currentValue > 0.30 {
+			beeep.Notify("WATCH OUT!!!", "The value has decreased a lot today", "assets/information.png")
 		}
 
-		time.Sleep(delay * time.Second)
+		time.Sleep(time.Duration(delay) * time.Minute)
 	}
 }
 
-func reachTheCurrencyAPI() (float64, float64) {
-	apiURL := "https://economia.awesomeapi.com.br/last/EUR-BRL"
+func reachTheCurrencyAPI(currency string) (float64, float64) {
+	apiURL := "https://economia.awesomeapi.com.br/last/"
+
+	switch currency {
+	case "EUR":
+		apiURL = apiURL + "EUR-BRL"
+	case "USD":
+		apiURL = apiURL + "USD-BRL"
+	}
+
 	response, _ := http.Get(apiURL)
 
 	responseBytes, _ := io.ReadAll(response.Body)
@@ -63,8 +70,40 @@ func reachTheCurrencyAPI() (float64, float64) {
 
 	json.Unmarshal(responseBytes, &res)
 
-	bid, _ := strconv.ParseFloat(res.EURBRL.Bid, 32)
-	high, _ := strconv.ParseFloat(res.EURBRL.High, 32)
+	var bid float64
+	var high float64
+	if currency == "EUR" {
+		bid, _ = strconv.ParseFloat(res.EURBRL.Bid, 32)
+		high, _ = strconv.ParseFloat(res.EURBRL.High, 32)
+	} else {
+		bid, _ = strconv.ParseFloat(res.USDBRL.Bid, 32)
+		high, _ = strconv.ParseFloat(res.USDBRL.High, 32)
+	}
 
 	return math.Round(bid*100) / 100, math.Round(high*100) / 100
+}
+
+func askUserTheInput() (string, float64, int) {
+	var currencyOption int
+	var valueToSell float64
+	var delay int
+
+	currency := "EUR"
+
+	fmt.Println("Select the currency you wish to monitor:")
+	fmt.Println("1 - EUR")
+	fmt.Println("2 - USD")
+	fmt.Scan(&currencyOption)
+
+	if currencyOption == 2 {
+		currency = "USD"
+	}
+
+	fmt.Println("Type the value that you intend to sell the", currency, "for")
+	fmt.Scan(&valueToSell)
+
+	fmt.Println("What is the monitoring frequency (in minutes)?")
+	fmt.Scan(&delay)
+
+	return currency, valueToSell, delay
 }
