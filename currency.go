@@ -38,10 +38,14 @@ func main() {
 	for {
 		currentValue, highestValue := reachTheCurrencyAPI(currency)
 
-		fmt.Println(currency, "now is R$", currentValue, " and the highest was R$", highestValue)
+		currentHour, currentMinute, _ := time.Now().Clock()
+		currentTimestampStr := fmt.Sprintf("%d:%02d", currentHour, currentMinute)
+
+		//currentTimestampStr := strconv.Itoa(currentHour) + ":" + strconv.Itoa(currentMinute)
+		fmt.Println(currency, "now is R$", currentValue, "and the highest was R$", highestValue, " - time checked:", currentTimestampStr)
 
 		if currentValue >= valueToSell {
-			message := currency + "now is " + fmt.Sprintf("%f", currentValue)
+			message := currency + " now is R$ " + fmt.Sprintf("%.3f", currentValue)
 
 			beeep.Notify("SELL IT NOW!!!", message, "assets/information.png")
 		} else if highestValue-currentValue > 0.30 {
