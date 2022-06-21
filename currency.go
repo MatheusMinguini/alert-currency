@@ -33,7 +33,7 @@ type Response struct {
 
 func main() {
 
-	currency, valueToSell, delay := askUserTheInput()
+	currency, valueToSell, decreaseValueWarning, delay := askUserTheInput()
 
 	for {
 		currentValue, highestValue := reachTheCurrencyAPI(currency)
@@ -41,14 +41,13 @@ func main() {
 		currentHour, currentMinute, _ := time.Now().Clock()
 		currentTimestampStr := fmt.Sprintf("%d:%02d", currentHour, currentMinute)
 
-		//currentTimestampStr := strconv.Itoa(currentHour) + ":" + strconv.Itoa(currentMinute)
 		fmt.Println(currency, "now is R$", currentValue, "and the highest was R$", highestValue, " - time checked:", currentTimestampStr)
 
 		if currentValue >= valueToSell {
 			message := currency + " now is R$ " + fmt.Sprintf("%.3f", currentValue)
 
 			beeep.Notify("SELL IT NOW!!!", message, "assets/information.png")
-		} else if highestValue-currentValue > 0.30 {
+		} else if highestValue-currentValue > decreaseValueWarning {
 			beeep.Notify("WATCH OUT!!!", "The value has decreased a lot today", "assets/information.png")
 		}
 
@@ -87,9 +86,10 @@ func reachTheCurrencyAPI(currency string) (float64, float64) {
 	return math.Round(bid*100) / 100, math.Round(high*100) / 100
 }
 
-func askUserTheInput() (string, float64, int) {
+func askUserTheInput() (string, float64, float64, int) {
 	var currencyOption int
 	var valueToSell float64
+	var decreaseWarningValue float64
 	var delay int
 
 	currency := "EUR"
@@ -106,8 +106,11 @@ func askUserTheInput() (string, float64, int) {
 	fmt.Println("Type the value that you intend to sell the", currency, "for")
 	fmt.Scan(&valueToSell)
 
+	fmt.Println("Decrease alert value - We will warn you if the currency decreases this value typed")
+	fmt.Scan(&decreaseWarningValue)
+
 	fmt.Println("What is the monitoring frequency (in minutes)?")
 	fmt.Scan(&delay)
 
-	return currency, valueToSell, delay
+	return currency, valueToSell, decreaseWarningValue, delay
 }
